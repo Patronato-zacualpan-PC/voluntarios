@@ -1,156 +1,156 @@
-<!DOCTYPE html><html lang="es"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Recepción – Intrack360</title>
-<link rel="icon" href="favicon.ico">
-<style>
-*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;background:#f4f4f4;margin:0;padding:20px}
-h1{color:#1976d2;text-align:center;margin-top:0}
-.card{background:#fff;padding:22px;margin:auto;max-width:780px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.12)}
-label{font-weight:bold;margin-top:12px;display:block}input,textarea{width:100%;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:4px}
-input[readonly]{background:#e9e9e9}button{background:#1976d2;color:#fff;border:none;padding:12px 18px;border-radius:4px;cursor:pointer;margin-top:14px}
-button:hover{background:#135ba1}.legend{background:#e0f7fa;padding:10px;border-left:5px solid #00796b;border-radius:4px;margin-bottom:18px}
-textarea{resize:vertical}canvas{border:1px solid #ccc;border-radius:4px;margin-top:6px}
-</style>
-</head><body>
-<h1>🛠 Recepción – Intrack360</h1>
-<div class="card">
-  <div class="legend"><b>Nota:</b> edita conceptos y cláusulas; solo se guardará lo seleccionado.</div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Donadores PCZ</title>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+      background: #f4f4f4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    .verde { background: #d0f0c0; }
+    .azul { background: #c0e7f7; }
+    .rojo { background: #f8d0d0; }
+    .leyenda span { margin-right: 2rem; font-weight: bold; }
+    .leyenda .verde::before { content: '✅ '; }
+    .leyenda .azul::before { content: '⏩ '; }
+    .leyenda .rojo::before { content: '⏪ '; }
+    button {
+      padding: 0.5rem 1rem;
+      margin-top: 1rem;
+    }
+    .instruccion-validacion {
+      background:#fff3cd;
+      padding: 1rem;
+      border-left: 6px solid #ffc107;
+      font-size: 14px;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h2>Panel de Donadores</h2>
 
-  <!-- Datos -->
-  <label>Folio</label><input id="folio" readonly>
-  <label>Cliente</label><input id="nombreCliente" placeholder="Juan Pérez">
-  <label>Teléfono</label><input id="telefonoCliente" placeholder="3111234567">
-  <label>Población</label><input id="poblacionCliente" placeholder="Ciudad">
-
-  <!-- Vehículo -->
-  <label>Placas</label><input id="placas" placeholder="ABC1234" onblur="buscarPlacas()">
-  <label>Marca</label><input id="marca">
-  <label>Modelo</label><input id="modelo">
-  <label>Año</label><input id="anio">
-  <label>Motor</label><input id="motor">
-  <label>Cilindrada</label><input id="cilindrada">
-
-  <!-- Conceptos -->
-  <label>Conceptos de trabajo</label>
-  <div id="conceptos"></div>
-
-  <label>Presupuesto / Tiempo estimado</label>
-  <input id="presupuesto" placeholder="$8 000 MXN / 3 días">
-
-  <label>Observaciones</label><textarea id="observaciones" rows="3"></textarea>
-
-  <!-- Cláusulas -->
-  <div id="clausulas" class="legend" style="background:#f0f0f0;border-left:4px solid #1976d2">
-    <textarea rows="3">1. El taller no se hace responsable por objetos no declarados.</textarea>
-    <textarea rows="3">2. Si no se acepta el presupuesto se cobrará diagnóstico.</textarea>
-    <textarea rows="3">3. Pasadas 24 h de notificado, pensión de $50 MXN diarios.</textarea>
+  <div class="instruccion-validacion">
+    <strong>🛡 Instrucciones de validación:</strong><br>
+    Si un donador aparece en esta lista es porque <strong>no ha confirmado su código por WhatsApp</strong>.<br>
+    Antes de activarlo manualmente, recomendamos <strong>llamar directamente al número registrado</strong> y preguntar:<br>
+    <em>“¿Usted se registró como padrino del Patronato Zacualpan con una promesa mensual de $X?”</em><br>
+    <br>
+    Si la respuesta es afirmativa, puedes validar con el botón verde.<br>
+    Si no responde o niega el registro, puedes descartarlo con el botón rojo.<br>
+    <br>
+    Todos los cambios quedarán registrados para seguimiento y seguridad. ✔️
   </div>
 
-  <!-- Firma -->
-  <label>Firma del cliente</label>
-  <canvas id="firma" width="560" height="140"></canvas><br>
-  <button onclick="pad.clear()">Borrar firma</button>
+  <div class="leyenda">
+    <span class="verde">Al día</span>
+    <span class="azul">Adelantado</span>
+    <span class="rojo">Atrasado</span>
+  </div>
 
-  <!-- Final -->
-  <button onclick="generarPDF()">📄 Generar PDF y subir</button>
-</div>
+  <table id="tablaDonadores">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Teléfono</th>
+        <th>Población</th>
+        <th>Promesa Mensual</th>
+        <th>Total Aportado</th>
+        <th>Días de Atraso</th>
+        <th>Estatus</th>
+        <th>Último Pago</th>
+        <th>Último Mensaje</th>
+        <th>Recordatorio Preferido</th>
+        <th>WhatsApp</th>
+        <th>Recordar Ahora</th>
+      </tr>
+    </thead>
+    <tbody id="cuerpoTabla"></tbody>
+  </table>
+  <button onclick="descargarExcel()">Descargar Excel</button>
 
-<!-- Firebase compat -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const firebaseConfig = {
+        // Tu configuración aquí
+      };
 
-<!-- librerías -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.0.6/signature_pad.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
 
-<script>
-/* === 1. Configura con TU proyecto === */
-const firebaseConfig={apiKey:"TU_API_KEY",authDomain:"tu-proyecto.firebaseapp.com",projectId:"tu-proyecto",
-storageBucket:"tu-proyecto.appspot.com",messagingSenderId:"*********",appId:"1:*********:web:**********"};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore(),st=firebase.storage();
+      function diasDeAtraso(fechaPago) {
+        const hoy = new Date();
+        const fecha = new Date(fechaPago);
+        const diferencia = hoy - fecha;
+        return Math.floor(diferencia / (1000 * 60 * 60 * 24));
+      }
 
-/* === 2. Conceptos demo === */
-const base=["Cambio de aceite","Diagnóstico de motor con escáner","Afinación mayor","Revisión de frenos",
-"Servicio de suspensión","Sincronización de distribución","Lavado de inyectores","Reemplazo de batería",
-"Revisión eléctrica","Reparación de clima"];
-base.forEach(t=>{
-  const id=t.toLowerCase().replace(/\s+/g,'_');
-  document.getElementById('conceptos').insertAdjacentHTML('beforeend',
-  `<label style="font-weight:normal"><input type="checkbox" id="c_${id}"> 
-   <input type="text" id="t_${id}" value="${t}" style="width:85%"></label>`);});
+      function estatusDonador(dias) {
+        if (dias <= 0) return 'verde';
+        if (dias <= 30) return 'azul';
+        return 'rojo';
+      }
 
-/* === 3. Firma === */
-const pad=new SignaturePad(document.getElementById('firma'));
+      function cargarDonadores() {
+        db.collection("donadores").get().then(snapshot => {
+          const cuerpo = document.getElementById("cuerpoTabla");
+          cuerpo.innerHTML = "";
+          snapshot.forEach(doc => {
+            const d = doc.data();
+            const diasAtraso = diasDeAtraso(d.ultimoPago);
+            const estatus = estatusDonador(diasAtraso);
+            const fila = `
+              <tr class="${estatus}">
+                <td>${d.nombre}</td>
+                <td>${d.telefono}</td>
+                <td>${d.poblacion}</td>
+                <td>$${d.promesaMensual}</td>
+                <td>$${d.totalAportado || 0}</td>
+                <td>${diasAtraso}</td>
+                <td>${estatus === 'verde' ? '✅ Al día' : estatus === 'azul' ? '⏩ Adelantado' : '⏪ Atrasado'}</td>
+                <td>${d.ultimoPago}</td>
+                <td>${d.ultimoMensaje || 'N/A'}</td>
+                <td>${d.diaPreferido || 'Domingo'}</td>
+                <td><a href="https://wa.me/52${d.telefono}?text=${encodeURIComponent('Hola ' + d.nombre + ', este es tu recordatorio para tu aportación al Patronato Zacualpan.')}" target="_blank">Enviar</a></td>
+                <td><button onclick="enviarRecordatorioManual('${d.telefono}', '${d.nombre}', '${diasAtraso}')">Recordar</button></td>
+              </tr>
+            `;
+            cuerpo.innerHTML += fila;
+          });
+        }).catch(err => {
+          console.error("Error al cargar donadores:", err);
+        });
+      }
 
-/* === 4. Folio autoincremental === */
-async function folioNuevo(){
- const s=await db.collection('ordenesTrabajo').orderBy('folio','desc').limit(1).get();
- let f='TAL001-0001';
- if(!s.empty){const n=parseInt(s.docs[0].data().folio.split('-')[1])+1;f='TAL001-'+String(n).padStart(4,'0');}
- document.getElementById('folio').value=f;}
-window.onload=folioNuevo;
+      window.enviarRecordatorioManual = function(telefono, nombre, diasAtraso) {
+        const mensaje = `Hola ${nombre}, este es tu recordatorio para apoyar al Patronato Zacualpan. Llevas ${diasAtraso} días de atraso. Puedes hacer tu depósito a la cuenta SPIN OXXO: Miriam Camacho Martínez, CLABE: 7289 6900 0138 8899 56.`;
+        window.open(`https://wa.me/52${telefono}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      };
 
-/* === 5. Buscar por placas === */
-async function buscarPlacas(){
- const p=document.getElementById('placas').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
- document.getElementById('placas').value=p;if(!p)return;
- const q=await db.collection('ordenesTrabajo').where('placas','==',p).limit(1).get();
- if(!q.empty){const d=q.docs[0].data();["nombreCliente","telefonoCliente","poblacionCliente",
- "marca","modelo","anio","motor","cilindrada"].forEach(k=>{if(d[k])document.getElementById(k).value=d[k];});
- alert('Datos cargados por placa');}}
- 
-/* === 6. Generar PDF y subir === */
-async function generarPDF(){
- if(pad.isEmpty()){alert('Falta firma');return;}
- const folio=document.getElementById('folio').value;
+      window.descargarExcel = function() {
+        const tabla = document.getElementById("tablaDonadores");
+        const wb = XLSX.utils.table_to_book(tabla, {sheet: "Donadores"});
+        XLSX.writeFile(wb, "reporte-donadores-PCZ.xlsx");
+      };
 
- // previsualización
- const prev=document.createElement('div');prev.style.padding='20px';
- prev.innerHTML=document.querySelector('.card').innerHTML;
- const img=new Image();img.src=pad.toDataURL();img.style.width='160px';prev.appendChild(img);
- prev.style.position='fixed';prev.style.left='-9999px';document.body.appendChild(prev);
-
- const cvs=await html2canvas(prev,{scale:2});document.body.removeChild(prev);
- const {jsPDF}=window.jspdf;const pdf=new jsPDF('p','pt','letter');
- pdf.addImage(cvs,'PNG',20,20,560,0);const blob=pdf.output('blob');
-
- const ref=st.ref().child(`recepciones/${folio}.pdf`);await ref.put(blob);
- const url=await ref.getDownloadURL();
-
- // selecciona conceptos marcados
- const seleccion=base.filter(t=>{
-   const id=t.toLowerCase().replace(/\\s+/g,'_');
-   return document.getElementById('c_'+id).checked;});
-
- await db.collection('ordenesTrabajo').add({
-   folio,
-   nombreCliente:document.getElementById('nombreCliente').value,
-   telefonoCliente:document.getElementById('telefonoCliente').value,
-   poblacionCliente:document.getElementById('poblacionCliente').value,
-   placas:document.getElementById('placas').value,
-   marca:document.getElementById('marca').value,
-   modelo:document.getElementById('modelo').value,
-   anio:document.getElementById('anio').value,
-   motor:document.getElementById('motor').value,
-   cilindrada:document.getElementById('cilindrada').value,
-   presupuesto:document.getElementById('presupuesto').value,
-   observaciones:document.getElementById('observaciones').value,
-   conceptos:seleccion,
-   pdfUrl:url,
-   fechaFirma:new Date().toISOString()
- });
- alert('PDF subido y orden guardada ✔️');folioNuevo();pad.clear();
- /* === Para WhatsApp descomenta la línea siguiente y configura tu función === */
- // await sendWhatsApp(document.getElementById('telefonoCliente').value,folio,url);
-}
-
-/* === 7. (Opc) WhatsApp Cloud Function ===
-async function sendWhatsApp(tel,folio,link){
- await fetch('/send-whatsapp',{method:'POST',headers:{'Content-Type':'application/json'},
- body:JSON.stringify({to:`52${tel}`,folio,link})});
-}*/
-</script>
-</body></html>
+      cargarDonadores();
+    });
+  </script>
+</body>
+</html>
